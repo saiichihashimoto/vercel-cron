@@ -1,0 +1,13 @@
+{
+  "fakeTimers": {
+    "enableGlobally": true,
+    "now": 1696486441293
+  },
+  "passWithNoTests": true,
+  "preset": "ts-jest",
+  "restoreMocks": true,
+  "resetModules": true,
+  "testMatch": ["**/?(*.)+(spec|test).[jt]s?(x)"],
+  "verbose": true,
+  "modulePaths": ["."]
+}

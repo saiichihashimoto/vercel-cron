@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "allowEmpty": true,
+  "reporters": ["clear-text", "progress"],
+  "checkers": ["typescript"],
+  "testRunner": "jest",
+  "thresholds": {
+    "high": 95,
+    "low": 90,
+    "break": 85
+  }
+}

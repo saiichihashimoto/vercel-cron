@@ -1,0 +1,6 @@
+{
+  "peer": true,
+  "root": true,
+  "upgrade": true,
+  "verbose": true
+}

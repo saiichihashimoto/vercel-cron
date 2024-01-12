@@ -1,0 +1,5 @@
+{
+  "entry": ["src/bin.ts"],
+  "dts": true,
+  "skipNodeModulesBundle": true
+}

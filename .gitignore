@@ -1,0 +1,12 @@
+.DS_Store
+.bundle
+.eslintcache
+.stryker-tmp
+.turbo
+Brewfile.lock.json
+Gemfile.lock
+dist
+node_modules
+reports
+tsup.config.bundled_*.mjs
+vendor/bundle

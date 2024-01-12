@@ -1,0 +1,8 @@
+**/.next/**
+**/.sanity/**
+**/dist/**
+*lock.json
+.husky/**
+next-env.d.ts
+tsup.config.bundled_*.mjs
+vendor/bundle
