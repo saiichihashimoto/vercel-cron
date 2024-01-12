@@ -22,7 +22,7 @@
     "test": "jest --color --cache"
   },
   "devDependencies": {
-    "@cspell/eslint-plugin": "8.2.4",
+    "@cspell/eslint-plugin": "8.3.2",
     "@jest/globals": "29.7.0",
     "@standard-configs/prettier-plugin": "1.0.12",
     "@stryker-mutator/core": "8.0.0",
