@@ -1,8 +1,4 @@
 {
-  "fakeTimers": {
-    "enableGlobally": true,
-    "now": 1696486441293
-  },
   "passWithNoTests": true,
   "preset": "ts-jest",
   "restoreMocks": true,

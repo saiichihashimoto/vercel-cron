@@ -1,12 +1,14 @@
 import fs from "node:fs/promises";
 
 import boxen from "boxen";
-import chalk from "chalk";
+import chalk, { supportsColor } from "chalk";
 import { Command, Option } from "commander";
 import { Cron } from "croner";
 import cronstrue from "cronstrue";
 import pino from "pino";
 import z from "zod";
+
+import pkg from "../package.json";
 
 type MaybePromise<V> = Promise<V> | V;
 
@@ -65,7 +67,8 @@ export const main = async () => {
     })
     .parse(
       new Command()
-        .name("vercel-cron")
+        .name(pkg.name)
+        .version(pkg.version)
         .option("-u --url <url>", "Base URL", "http://localhost:3000")
         .option("-p --config <config>", "Vercel Config", "./vercel.json")
         .addOption(
@@ -102,10 +105,13 @@ export const main = async () => {
     transport: {
       target: "pino-pretty",
       options: {
+        colorize: Boolean(supportsColor),
         float: "center",
         levelFirst: true,
         singleLine: true,
-        translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
+        translateTime: process.env.IGNORE_TIME
+          ? "'test'"
+          : "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
         ignore: "pid,hostname",
       },
     },
