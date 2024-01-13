@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "concurrently --prefix-colors \"auto\" npm:dev:*",
-    "dev:build": "npm run build -- --watch --onSuccess \"./dist/bin.js --help && ./dist/bin.js --level trace\"",
+    "dev:build": "npm run build -- --watch --onSuccess \"./dist/bin.js --version && ./dist/bin.js --help && ./dist/bin.js --level trace\"",
     "dev:test": "npm run test -- --watch",
     "lint": "lint-staged --shell --verbose --diff \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\" --no-stash",
     "prepare": "is-ci || husky install",

@@ -143,7 +143,13 @@
     "fp/no-rest-parameters": "off",
     "fp/no-throw": "off",
     "fp/no-unused-expression": "off",
-    "import/extensions": ["error", "never"],
+    "import/extensions": [
+      "error",
+      "never",
+      {
+        "json": "always"
+      }
+    ],
     "import/no-absolute-path": "error",
     "import/no-amd": "error",
     "import/no-anonymous-default-export": [
@@ -178,7 +184,7 @@
       {
         "missingExports": true,
         "unusedExports": true,
-        "ignoreExports": ["./*", "./src/bin.ts", "**/*.d.ts"]
+        "ignoreExports": ["./*", "./src/bin.ts", "**/*.d.ts", "**/*.test.*"]
       }
     ],
     "import/no-useless-path-segments": "error",
