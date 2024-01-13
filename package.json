@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "concurrently --prefix-colors \"auto\" npm:dev:*",
-    "dev:build": "npm run build -- --watch --onSuccess \"./dist/bin.js\"",
+    "dev:build": "npm run build -- --watch --onSuccess \"./dist/bin.js --help && ./dist/bin.js --level trace\"",
     "dev:test": "npm run test -- --watch",
     "lint": "lint-staged --shell --verbose --diff \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\" --no-stash",
     "prepare": "is-ci || husky install",
@@ -23,7 +23,14 @@
     "test": "jest --color --cache"
   },
   "dependencies": {
-    "boxen": "7.1.1"
+    "boxen": "7.1.1",
+    "chalk": "5.3.0",
+    "commander": "11.1.0",
+    "croner": "8.0.0",
+    "cronstrue": "2.47.0",
+    "pino": "8.17.2",
+    "pino-pretty": "10.3.1",
+    "zod": "3.22.4"
   },
   "devDependencies": {
     "@cspell/eslint-plugin": "8.3.2",
