@@ -119,7 +119,7 @@
       {
         "autoFix": false,
         "cspell": {
-          "words": ["encryptor", "unstash", "zeplo"]
+          "words": ["cronstrue", "encryptor", "pino", "unstash", "zeplo"]
         }
       }
     ],
@@ -136,6 +136,9 @@
         "ignore": ["eslint-enable"]
       }
     ],
+    "fp/no-let": "off",
+    "fp/no-mutating-methods": "off",
+    "fp/no-mutation": "off",
     "fp/no-nil": "off",
     "fp/no-rest-parameters": "off",
     "fp/no-throw": "off",
@@ -385,7 +388,6 @@
         "id-length": "off",
         "@typescript-eslint/consistent-type-imports": "off",
         "@typescript-eslint/promise-function-async": "off",
-        "fp/no-let": "off",
         "fp/no-mutation": "off",
         "fp/no-unused-expression": "off",
         "import/no-extraneous-dependencies": [

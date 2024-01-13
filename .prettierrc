@@ -7,7 +7,7 @@
     "@standard-configs/prettier-plugin"
   ],
   "quoteProps": "consistent",
-  "importOrder": ["^src/(.*)$", "^[./]"],
+  "importOrder": ["^node:", "<THIRD_PARTY_MODULES>", "^src/(.*)$", "^[./]"],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true
 }
