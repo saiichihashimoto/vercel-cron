@@ -1,50 +1,26 @@
-import {
-  ChildProcess,
-  ExecException,
-  ExecOptions,
-  exec as execCallback,
-} from "node:child_process";
+import { exec as execCallback } from "node:child_process";
+import { promisify } from "node:util";
 
 import { beforeAll, describe, expect, it } from "@jest/globals";
 
-const exec = (command: string, options: ExecOptions = {}) => {
-  let proc: ChildProcess;
+// eslint-disable-next-line global-require, @typescript-eslint/no-require-imports, unicorn/prefer-module, @typescript-eslint/no-unused-vars -- HACK We're "including" bin by running a process against the built file so jest won't pick it up with `--findRelatedTests`.
+const helpJestFindRelatedTests = () => require("./bin");
 
-  const promise = new Promise<{
-    error: ExecException | null;
-    stderr: string;
-    stdout: string;
-  }>((resolve) => {
-    proc = execCallback(
-      command,
-      options,
-      // eslint-disable-next-line promise/prefer-await-to-callbacks -- HACK promisify loses reference to process, which we need
-      (error, stdout, stderr) => resolve({ error, stderr, stdout })
-    );
-  });
-
-  return {
-    // @ts-expect-error -- HACK it gets set immediately in the promise
-    proc,
-    promise,
-  };
-};
+const exec = promisify(execCallback);
 
 describe("bin", () => {
   beforeAll(async () => {
-    await exec("npm run build").promise;
+    await exec("npm run build");
   });
 
   it("--version", async () => {
-    const { stderr, stdout } = await exec("node ./dist/bin.js --version")
-      .promise;
-
+    const { stderr, stdout } = await exec("node ./dist/bin.js --version");
     expect(stderr).toBe("");
     expect(stdout).toBe("0.0.0-development\n");
   });
 
   it("--help", async () => {
-    const { stderr, stdout } = await exec("node ./dist/bin.js --help").promise;
+    const { stderr, stdout } = await exec("node ./dist/bin.js --help");
 
     expect(stderr).toBe("");
     expect(stdout).toBe(`Usage: vercel-cron [options]
@@ -54,6 +30,7 @@ Options:
   -u --url <url>        Base URL (default: "http://localhost:3000")
   -p --config <config>  Vercel Config (default: "./vercel.json")
   -s --secret <secret>  Cron Secret
+  --dryRun              Shows scheduled CRONs and quits (default: false)
   -l --level <level>    Logging Level (choices: "trace", "debug", "info",
                         "warn", "error", "fatal", default: "info")
   -h, --help            display help for command
@@ -61,15 +38,11 @@ Options:
   });
 
   it("runs with empty vercel.json", async () => {
-    const { proc, promise } = exec("node ./dist/bin.js", {
-      env: { ...process.env, FORCE_COLOR: "0", IGNORE_TIME: "1" },
-    });
+    const { stderr, stdout } = await exec(
+      "node ./dist/bin.js --ignoreTime --dryRun",
+      { env: { ...process.env, FORCE_COLOR: "0" } }
+    );
 
-    setTimeout(() => proc.kill("SIGINT"), 1000);
-
-    const { error, stderr, stdout } = await promise;
-
-    expect(error).toHaveProperty("signal", "SIGINT");
     expect(stderr).toBe("");
     expect(stdout).toBe(`╭─────────────────────────╮
 │                         │
@@ -77,7 +50,7 @@ Options:
 │                         │
 ╰─────────────────────────╯
 
-INFO [test]: No CRONs Scheduled
+INFO: No CRONs Scheduled
 `);
   });
 });

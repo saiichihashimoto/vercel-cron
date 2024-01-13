@@ -2,13 +2,10 @@ import fs from "node:fs/promises";
 
 import boxen from "boxen";
 import chalk, { supportsColor } from "chalk";
-import { Command, Option } from "commander";
 import { Cron } from "croner";
 import cronstrue from "cronstrue";
 import pino from "pino";
 import z from "zod";
-
-import pkg from "../package.json";
 
 type MaybePromise<V> = Promise<V> | V;
 
@@ -50,42 +47,23 @@ const unshiftIterable = async function* <T>(
   }
 };
 
-export const main = async () => {
-  const opts = z
-    .object({
-      url: z.string(),
-      config: z.string(),
-      secret: z.optional(z.string()),
-      level: z.union([
-        z.literal("trace"),
-        z.literal("debug"),
-        z.literal("info"),
-        z.literal("warn"),
-        z.literal("error"),
-        z.literal("fatal"),
-      ]),
-    })
-    .parse(
-      new Command()
-        .name(pkg.name)
-        .version(pkg.version)
-        .option("-u --url <url>", "Base URL", "http://localhost:3000")
-        .option("-p --config <config>", "Vercel Config", "./vercel.json")
-        .addOption(
-          new Option("-s --secret <secret>", "Cron Secret").default(
-            process.env.CRON_SECRET,
-            "process.env.CRON_SECRET"
-          )
-        )
-        .addOption(
-          new Option("-l --level <level>", "Logging Level")
-            .default("info")
-            .choices(["trace", "debug", "info", "warn", "error", "fatal"])
-        )
-        .parse()
-        .opts()
-    );
+export const zOpts = z.object({
+  url: z.string(),
+  config: z.string(),
+  secret: z.optional(z.string()),
+  ignoreTime: z.optional(z.boolean()),
+  dryRun: z.boolean(),
+  level: z.union([
+    z.literal("trace"),
+    z.literal("debug"),
+    z.literal("info"),
+    z.literal("warn"),
+    z.literal("error"),
+    z.literal("fatal"),
+  ]),
+});
 
+export const main = async (opts: z.infer<typeof zOpts>) => {
   // eslint-disable-next-line no-console -- boxen!
   console.log(
     boxen("▲   Vercel CRON   ▲", {
@@ -96,11 +74,11 @@ export const main = async () => {
     })
   );
 
-  const { config, level, secret, url } = opts;
+  const { config, dryRun, ignoreTime, level, secret, url } = opts;
 
   const logger = pino({
     level,
-    // timestamp: false,
+    timestamp: !ignoreTime,
     errorKey: "error",
     transport: {
       target: "pino-pretty",
@@ -109,9 +87,7 @@ export const main = async () => {
         float: "center",
         levelFirst: true,
         singleLine: true,
-        translateTime: process.env.IGNORE_TIME
-          ? "'test'"
-          : "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
+        translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
         ignore: "pid,hostname",
       },
     },
@@ -211,5 +187,11 @@ export const main = async () => {
     }
 
     abortPrevious = await watchConfig();
+
+    if (dryRun) {
+      abortPrevious();
+
+      break;
+    }
   }
 };
