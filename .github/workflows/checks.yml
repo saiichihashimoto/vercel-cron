@@ -118,4 +118,6 @@ jobs:
             exit 1
           fi
 
-      - run: npm run stryker
+      - env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+        run: npm run stryker
