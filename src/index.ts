@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 
 import boxen from "boxen";
-import chalk, { supportsColor } from "chalk";
+import chalk from "chalk";
 import { Cron } from "croner";
 import cronstrue from "cronstrue";
 import pino from "pino";
@@ -47,43 +47,48 @@ const unshiftIterable = async function* <T>(
   }
 };
 
-export const zOpts = z.object({
-  url: z.string(),
-  config: z.string(),
-  secret: z.optional(z.string()),
-  ignoreTime: z.optional(z.boolean()),
-  dryRun: z.boolean(),
-  level: z.union([
-    z.literal("trace"),
-    z.literal("debug"),
-    z.literal("info"),
-    z.literal("warn"),
-    z.literal("error"),
-    z.literal("fatal"),
-  ]),
-});
+export const zOpts = z
+  .object({
+    color: z.boolean(),
+    config: z.string(),
+    dry: z.boolean(),
+    ignoreTimestamp: z.boolean(),
+    secret: z.nullable(z.string()),
+    url: z.string(),
+    level: z.union([
+      z.literal("trace"),
+      z.literal("debug"),
+      z.literal("info"),
+      z.literal("warn"),
+      z.literal("error"),
+      z.literal("fatal"),
+      z.literal("silent"),
+    ]),
+  })
+  .partial();
 
-export const main = async (opts: z.infer<typeof zOpts>) => {
-  // eslint-disable-next-line no-console -- boxen!
-  console.log(
-    boxen("▲   Vercel CRON   ▲", {
-      borderColor: "magenta",
-      borderStyle: "round",
-      margin: { left: 0, right: 0, top: 0, bottom: 1 },
-      padding: 1,
-    })
-  );
+export const defaults = {
+  color: Boolean(chalk.supportsColor),
+  config: "./vercel.json",
+  level: "info",
+  secret: process.env.CRON_SECRET ?? null,
+  url: "http://localhost:3000",
+} satisfies z.infer<typeof zOpts>;
 
-  const { config, dryRun, ignoreTime, level, secret, url } = opts;
+export const main = async (opts: z.infer<typeof zOpts> = {}) => {
+  const { color, config, dry, ignoreTimestamp, level, secret, url } = {
+    ...defaults,
+    ...opts,
+  };
 
   const logger = pino({
     level,
-    timestamp: !ignoreTime,
+    timestamp: !ignoreTimestamp,
     errorKey: "error",
     transport: {
       target: "pino-pretty",
       options: {
-        colorize: Boolean(supportsColor),
+        colorize: color,
         float: "center",
         levelFirst: true,
         singleLine: true,
@@ -92,6 +97,18 @@ export const main = async (opts: z.infer<typeof zOpts>) => {
       },
     },
   });
+
+  if (logger.isLevelEnabled("fatal")) {
+    // eslint-disable-next-line no-console -- boxen!
+    console.log(
+      boxen("▲   Vercel CRON   ▲", {
+        borderColor: color ? "magenta" : undefined,
+        borderStyle: "round",
+        margin: { left: 0, right: 0, top: 0, bottom: 1 },
+        padding: 1,
+      })
+    );
+  }
 
   logger.trace({ opts }, "Parsed Options");
 
@@ -174,24 +191,21 @@ export const main = async (opts: z.infer<typeof zOpts>) => {
 
   // eslint-disable-next-line no-restricted-syntax, fp/no-loops -- Generator loop
   for await (const value of unshiftIterable(
-    {
-      eventType: "rename",
-      filename: config,
-    },
+    { eventType: "rename", filename: config },
     fs.watch(config, { persistent: true })
   )) {
     if (abortPrevious) {
       logger.trace(value, "fs.watch");
       logger.info({ config }, "Config Changed");
-      abortPrevious();
     }
 
+    abortPrevious?.();
     abortPrevious = await watchConfig();
 
-    if (dryRun) {
-      abortPrevious();
-
+    if (dry) {
       break;
     }
   }
+
+  abortPrevious?.();
 };

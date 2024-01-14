@@ -1,5 +1,5 @@
 {
-  "entry": ["src/bin.ts"],
+  "entry": ["src/vercel-cron.ts"],
   "format": ["esm"],
   "clean": true,
   "skipNodeModulesBundle": true
