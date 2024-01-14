@@ -7,7 +7,7 @@ const prettierCmd = `prettier --ignore-unknown --write --cache`;
 /**
  * @type {import('lint-staged').Config}
  */
-export default {
+module.exports = {
   "*.{gif,jpeg,jpg,png,svg}": ["imagemin-lint-staged"],
   "*.{js,jsx,ts,tsx}": [eslintCmd],
   "*": [prettierCmd],

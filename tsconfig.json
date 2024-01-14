@@ -4,12 +4,17 @@
     "target": "es6",
     "lib": ["dom", "dom.iterable", "esnext"],
     "jsx": "preserve",
-    "module": "esnext",
+    "module": "CommonJS",
+    "rootDir": "./src",
     "moduleResolution": "node",
     "baseUrl": "./src",
+    "typeRoots": ["@types", "node_modules/@types"],
     "resolveJsonModule": true,
     "allowJs": true,
     "checkJs": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "outDir": "./dist",
     "isolatedModules": true,
     "esModuleInterop": true,
@@ -22,6 +27,6 @@
     "skipLibCheck": true,
     "noErrorTruncation": true
   },
-  "include": ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "@types/**/*.d.ts"],
-  "exclude": ["dist", "node_modules"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["dist", "node_modules", "src/**/*.test.*"]
 }

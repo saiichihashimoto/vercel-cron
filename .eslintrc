@@ -289,7 +289,7 @@
       ],
       "parser": "@typescript-eslint/parser",
       "parserOptions": {
-        "project": ["./tsconfig.json", "./@types/tsconfig.json"]
+        "project": ["./tsconfig.eslint.json", "./@types/tsconfig.json"]
       },
       "rules": {
         "no-loop-func": "off",
@@ -453,7 +453,7 @@
       "plugins": ["@typescript-eslint"],
       "parser": "@typescript-eslint/parser",
       "parserOptions": {
-        "project": ["./tsconfig.json", "./@types/tsconfig.json"]
+        "project": ["./tsconfig.eslint.json", "./@types/tsconfig.json"]
       },
       "rules": {
         "no-var": "off",
