@@ -184,7 +184,12 @@
       {
         "missingExports": true,
         "unusedExports": true,
-        "ignoreExports": ["./*", "./src/bin.ts", "**/*.d.ts", "**/*.test.*"]
+        "ignoreExports": [
+          "./*",
+          "./src/vercel-cron.ts",
+          "**/*.d.ts",
+          "**/*.test.*"
+        ]
       }
     ],
     "import/no-useless-path-segments": "error",
