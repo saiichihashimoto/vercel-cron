@@ -82,7 +82,7 @@ describe("main", () => {
           statusText: "OK",
           type: "basic",
           url: url.toString(),
-          text: async () => "",
+          text: async () => "Some Text",
         } as Response)
     );
   });
@@ -102,11 +102,7 @@ describe("main", () => {
       process.cwd()
     );
 
-    proc = main({
-      destination,
-      fs,
-      signal: controller.signal,
-    });
+    proc = main({ destination, fs, signal: controller.signal });
 
     await jest.advanceTimersByTimeAsync(0);
 
@@ -126,11 +122,7 @@ describe("main", () => {
         time: 1696486441293,
         msg: "Watching Config",
       },
-      {
-        level: 30,
-        time: 1696486441293,
-        msg: "No CRONs Scheduled",
-      },
+      { level: 40, time: 1696486441293, msg: "No CRONs Scheduled" },
     ]);
   });
 
@@ -140,12 +132,7 @@ describe("main", () => {
       process.cwd()
     );
 
-    proc = main({
-      destination,
-      fs,
-      signal: controller.signal,
-      dry: true,
-    });
+    proc = main({ destination, fs, signal: controller.signal, dry: true });
 
     await jest.advanceTimersByTimeAsync(0);
 
@@ -165,11 +152,7 @@ describe("main", () => {
         time: 1696486441293,
         msg: "Watching Config",
       },
-      {
-        level: 30,
-        time: 1696486441293,
-        msg: "No CRONs Scheduled",
-      },
+      { level: 40, time: 1696486441293, msg: "No CRONs Scheduled" },
     ]);
   });
 
@@ -183,11 +166,7 @@ describe("main", () => {
       process.cwd()
     );
 
-    proc = main({
-      destination,
-      fs,
-      signal: controller.signal,
-    });
+    proc = main({ destination, fs, signal: controller.signal });
 
     await jest.advanceTimersByTimeAsync(0);
 
@@ -209,8 +188,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(1000);
 
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      1,
+    expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
       expect.objectContaining({
         method: "GET",
@@ -218,7 +196,6 @@ describe("main", () => {
         headers: {},
       })
     );
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(destination.logs).toStrictEqual([
       {
         currentRun: "2023-10-05T06:14:02.000Z",
@@ -231,7 +208,7 @@ describe("main", () => {
         level: 30,
         msg: "Succeeded /some-api Every second",
         status: 200,
-        text: "",
+        text: "Some Text",
         time: 1696486442000,
       },
     ]);
@@ -239,8 +216,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(1000);
 
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      2,
+    expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
       expect.objectContaining({
         method: "GET",
@@ -248,7 +224,6 @@ describe("main", () => {
         headers: {},
       })
     );
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(destination.logs).toStrictEqual([
       {
         currentRun: "2023-10-05T06:14:03.000Z",
@@ -261,13 +236,136 @@ describe("main", () => {
         level: 30,
         msg: "Succeeded /some-api Every second",
         status: 200,
-        text: "",
+        text: "Some Text",
         time: 1696486443000,
       },
     ]);
   });
 
-  it("misses CRON if config changes", async () => {
+  it("handles multiple schedules", async () => {
+    const { fs } = memfs(
+      {
+        "./vercel.json": JSON.stringify({
+          crons: [
+            { path: "/some-api", schedule: "2,4 * * * * *" },
+            { path: "/some-other-api", schedule: "3 * * * * *" },
+          ],
+        }),
+      },
+      process.cwd()
+    );
+
+    proc = main({ destination, fs, signal: controller.signal });
+
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(destination.logs).toStrictEqual([
+      {
+        config: "./vercel.json",
+        level: 20,
+        time: 1696486441293,
+        msg: "Watching Config",
+      },
+      {
+        level: 30,
+        msg: "Scheduled /some-api At 2 and 4 seconds past the minute",
+        time: 1696486441293,
+      },
+      {
+        level: 30,
+        msg: "Scheduled /some-other-api At 3 seconds past the minute",
+        time: 1696486441293,
+      },
+    ]);
+    destination.clear();
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "manual",
+        headers: {},
+      })
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api At 2 and 4 seconds past the minute",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Succeeded /some-api At 2 and 4 seconds past the minute",
+        status: 200,
+        text: "Some Text",
+        time: 1696486442000,
+      },
+    ]);
+    destination.clear();
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-other-api",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "manual",
+        headers: {},
+      })
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:03.000Z",
+        level: 30,
+        msg: "Started /some-other-api At 3 seconds past the minute",
+        time: 1696486443000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:03.000Z",
+        level: 30,
+        msg: "Succeeded /some-other-api At 3 seconds past the minute",
+        status: 200,
+        text: "Some Text",
+        time: 1696486443000,
+      },
+    ]);
+    destination.clear();
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "manual",
+        headers: {},
+      })
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:04.000Z",
+        level: 30,
+        msg: "Started /some-api At 2 and 4 seconds past the minute",
+        time: 1696486444000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:04.000Z",
+        level: 30,
+        msg: "Succeeded /some-api At 2 and 4 seconds past the minute",
+        status: 200,
+        text: "Some Text",
+        time: 1696486444000,
+      },
+    ]);
+    destination.clear();
+  });
+
+  it("reschedules CRONs on file change", async () => {
     const { fs, vol } = memfs(
       {
         "./vercel.json": JSON.stringify({
@@ -277,11 +375,7 @@ describe("main", () => {
       process.cwd()
     );
 
-    proc = main({
-      destination,
-      fs,
-      signal: controller.signal,
-    });
+    proc = main({ destination, fs, signal: controller.signal });
 
     await jest.advanceTimersByTimeAsync(0);
 
@@ -311,18 +405,226 @@ describe("main", () => {
         msg: "Config Changed",
         time: 1696486441293,
       },
-      {
-        level: 30,
-        msg: "No CRONs Scheduled",
-        time: 1696486441293,
-      },
+      { level: 40, msg: "No CRONs Scheduled", time: 1696486441293 },
     ]);
     destination.clear();
 
     await jest.advanceTimersByTimeAsync(100000);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(fetchSpy).toHaveBeenCalledTimes(0);
     expect(destination.logs).toHaveLength(0);
+  });
+
+  it("keeps running with malformed config", async () => {
+    const { fs, vol } = memfs(
+      { "./vercel.json": JSON.stringify([]) },
+      process.cwd()
+    );
+
+    proc = main({ destination, fs, signal: controller.signal });
+
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(destination.logs).toStrictEqual([
+      {
+        config: "./vercel.json",
+        level: 20,
+        time: 1696486441293,
+        msg: "Watching Config",
+      },
+      {
+        level: 60,
+        msg: "Failed to Schedule CRONs",
+        time: 1696486441293,
+        error: {
+          type: "ZodError",
+          name: "ZodError",
+          message: expect.any(String),
+          stack: expect.any(String),
+          aggregateErrors: [
+            {
+              code: "invalid_type",
+              expected: "object",
+              message: "Expected object, received array",
+              path: [],
+              received: "array",
+              stack: "",
+              type: "Object",
+            },
+          ],
+          issues: [
+            {
+              code: "invalid_type",
+              expected: "object",
+              message: "Expected object, received array",
+              path: [],
+              received: "array",
+            },
+          ],
+        },
+      },
+    ]);
+    destination.clear();
+
+    vol.fromNestedJSON(
+      {
+        "./vercel.json": JSON.stringify({
+          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+        }),
+      },
+      process.cwd()
+    );
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(destination.logs).toStrictEqual([
+      {
+        config: "./vercel.json",
+        level: 30,
+        msg: "Config Changed",
+        time: 1696486441293,
+      },
+      {
+        level: 30,
+        msg: "Scheduled /some-api Every second",
+        time: 1696486441293,
+      },
+    ]);
+    destination.clear();
+
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "manual",
+        headers: {},
+      })
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Succeeded /some-api Every second",
+        status: 200,
+        text: "Some Text",
+        time: 1696486442000,
+      },
+    ]);
+  });
+
+  it("prints not-ok fetch responses", async () => {
+    const { fs } = memfs(
+      {
+        "./vercel.json": JSON.stringify({
+          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+        }),
+      },
+      process.cwd()
+    );
+
+    fetchSpy.mockImplementation(
+      async (url) =>
+        ({
+          headers: {},
+          ok: false,
+          redirected: false,
+          status: 400,
+          statusText: "OK",
+          type: "basic",
+          url: url.toString(),
+          text: async () => "Mock Error",
+        } as Response)
+    );
+
+    proc = main({ destination, fs, signal: controller.signal });
+
+    await jest.advanceTimersByTimeAsync(0);
+    destination.clear();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "manual",
+        headers: {},
+      })
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 50,
+        msg: "Failed /some-api Every second",
+        status: 400,
+        text: "Mock Error",
+        time: 1696486442000,
+        error: {
+          message: "Mock Error",
+          type: "Error",
+          stack: expect.any(String),
+        },
+      },
+    ]);
+  });
+
+  it("prints fetch errors", async () => {
+    const { fs } = memfs(
+      {
+        "./vercel.json": JSON.stringify({
+          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+        }),
+      },
+      process.cwd()
+    );
+
+    fetchSpy.mockRejectedValue(new Error("Mock Error"));
+
+    proc = main({ destination, fs, signal: controller.signal });
+
+    await jest.advanceTimersByTimeAsync(0);
+    destination.clear();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
+      expect.objectContaining({
+        method: "GET",
+        redirect: "manual",
+        headers: {},
+      })
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 50,
+        msg: "Failed /some-api Every second",
+        time: 1696486442000,
+        error: {
+          message: "Mock Error",
+          type: "Error",
+          stack: expect.any(String),
+        },
+      },
+    ]);
   });
 });

@@ -9,32 +9,7 @@ import { debounce } from "lodash/fp";
 import pino from "pino";
 import z from "zod";
 
-// TODO [engine:node@>=20.3.0]: Replace with AbortSignal.any
-const anySignal = (signals: Array<AbortSignal | null | undefined>) => {
-  const controller = new globalThis.AbortController();
-
-  const onAbort = () => {
-    controller.abort();
-
-    signals.forEach((signal) => {
-      if (signal?.removeEventListener) {
-        signal.removeEventListener("abort", onAbort);
-      }
-    });
-  };
-
-  signals.forEach((signal) => {
-    if (signal?.addEventListener) {
-      signal.addEventListener("abort", onAbort);
-    }
-  });
-
-  if (signals.some((signal) => signal?.aborted)) {
-    onAbort();
-  }
-
-  return controller.signal;
-};
+import { anySignal } from "./utils";
 
 export const zOpts = z
   .object({
@@ -74,14 +49,14 @@ export const main = async ({
   signal?: AbortSignal;
 }) => {
   const {
+    color,
     config,
     dry,
     ignoreTimestamp,
+    pretty,
     secret,
     url,
-    color = false,
     level = "debug",
-    pretty = false,
   } = {
     ...defaults,
     ...opts,
@@ -120,15 +95,16 @@ export const main = async ({
     : pino(loggerOptions, destination);
 
   if (logger.isLevelEnabled("info") && pretty) {
-    // eslint-disable-next-line no-console -- boxen!
+    /* eslint-disable no-console -- boxen! */
     console.log(
       boxen("▲   Vercel CRON   ▲", {
         borderColor: color ? "magenta" : undefined,
         borderStyle: "round",
-        margin: { left: 0, right: 0, top: 0, bottom: 1 },
         padding: 1,
       })
     );
+    console.log();
+    /* eslint-enable no-console */
   }
 
   logger.trace({ opts }, "Parsed Options");
@@ -159,7 +135,7 @@ export const main = async ({
         cronstrue.toString(schedule)
       )}`;
 
-      const cron = Cron(schedule, { timezone: "UTC" }, async () => {
+      const cron = Cron(schedule, async () => {
         const runLogger = logger.child({ currentRun: cron.currentRun() });
         runLogger.info(`Started ${pathString}`);
 
@@ -178,14 +154,15 @@ export const main = async ({
           return;
         }
 
+        const text = await res.text();
         if (!res.ok) {
           runLogger.error(
-            { status: res.status, error: new Error(await res.text()) },
+            { status: res.status, text, error: new Error(text) },
             `Failed ${pathString}`
           );
         } else {
           runLogger.info(
-            { status: res.status, text: await res.text() },
+            { status: res.status, text },
             `Succeeded ${pathString}`
           );
         }
@@ -199,7 +176,7 @@ export const main = async ({
     });
 
     if (!crons.length) {
-      logger.info("No CRONs Scheduled");
+      logger.warn("No CRONs Scheduled");
     }
 
     return controller.abort.bind(controller);
@@ -222,7 +199,7 @@ export const main = async ({
       abortPrevious = await scheduleCrons();
     } catch (error) {
       logger.fatal({ error }, "Failed to Schedule CRONs");
-      abortPrevious?.();
+      abortPrevious = () => {};
     }
   }) satisfies Parameters<typeof fs.watch>[1]);
 

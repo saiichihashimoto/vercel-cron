@@ -10,6 +10,7 @@ import {
   it,
   jest,
 } from "@jest/globals";
+import chalk from "chalk";
 
 // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports, unicorn/prefer-module, @typescript-eslint/no-unused-vars -- HACK We're "including" bin by running a process against the built file so jest won't pick it up with `--findRelatedTests`.
 const helpJestFindRelatedTests = () => require("./vercel-cron");
@@ -81,18 +82,20 @@ Options:
 
   it("prints banner", async () => {
     const { stderr, stdout } = await exec(
-      "ts-node ./src/vercel-cron.ts --ignoreTimestamp --dry --no-color",
+      "ts-node ./src/vercel-cron.ts --ignoreTimestamp --dry",
       { signal: controller.signal }
     );
 
     expect(stderr).toBe("");
-    expect(stdout).toBe(`╭─────────────────────────╮
-│                         │
-│   ▲   Vercel CRON   ▲   │
-│                         │
-╰─────────────────────────╯
+    expect(stdout).toBe(
+      `${chalk.magenta("╭─────────────────────────╮")}
+${chalk.magenta("│")}                         ${chalk.magenta("│")}
+${chalk.magenta("│")}   ▲   Vercel CRON   ▲   ${chalk.magenta("│")}
+${chalk.magenta("│")}                         ${chalk.magenta("│")}
+${chalk.magenta("╰─────────────────────────╯")}
 
-INFO: No CRONs Scheduled
-`);
+${chalk.yellow("WARN")}: ${chalk.cyan(`No CRONs Scheduled`)}
+`
+    );
   });
 });
