@@ -5,6 +5,7 @@ import boxen from "boxen";
 import chalk from "chalk";
 import { Cron } from "croner";
 import cronstrue from "cronstrue";
+import { debounce } from "lodash/fp";
 import pino from "pino";
 import z from "zod";
 
@@ -209,7 +210,7 @@ export const main = async ({
 
   let abortPrevious: (() => void) | undefined;
 
-  const handler = (async (eventType, filename) => {
+  const handler = debounce(0, (async (eventType, filename) => {
     logger.trace({ eventType, filename }, "fs.watch");
 
     if (abortPrevious) {
@@ -224,7 +225,7 @@ export const main = async ({
       logger.fatal({ error }, "Failed to Schedule CRONs");
       abortPrevious?.();
     }
-  }) satisfies Parameters<typeof fs.watch>[1];
+  }) satisfies Parameters<typeof fs.watch>[1]);
 
   handler("rename", config);
 

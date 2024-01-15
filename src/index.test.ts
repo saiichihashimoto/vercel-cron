@@ -119,11 +119,13 @@ describe("main", () => {
     ]);
 
     expect(winner).toBe("timeout");
-    expect(destination.logs).toContainEqual({
-      level: 30,
-      time: 1696486441293,
-      msg: "No CRONs Scheduled",
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        level: 30,
+        time: 1696486441293,
+        msg: "No CRONs Scheduled",
+      },
+    ]);
   });
 
   it("dry ends the process immediately", async () => {
@@ -150,11 +152,13 @@ describe("main", () => {
     ]);
 
     expect(winner).not.toBe("timeout");
-    expect(destination.logs).toContainEqual({
-      level: 30,
-      time: 1696486441293,
-      msg: "No CRONs Scheduled",
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        level: 30,
+        time: 1696486441293,
+        msg: "No CRONs Scheduled",
+      },
+    ]);
   });
 
   it("executes CRON when schedule passes", async () => {
@@ -176,11 +180,13 @@ describe("main", () => {
     await jest.advanceTimersByTimeAsync(0);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(destination.logs).toContainEqual({
-      level: 30,
-      msg: "Scheduled /some-api Every second",
-      time: 1696486441293,
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        level: 30,
+        msg: "Scheduled /some-api Every second",
+        time: 1696486441293,
+      },
+    ]);
     destination.clear();
 
     await jest.advanceTimersByTimeAsync(1000);
@@ -195,20 +201,22 @@ describe("main", () => {
       })
     );
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(destination.logs).toContainEqual({
-      currentRun: "2023-10-05T06:14:02.000Z",
-      level: 30,
-      msg: "Started /some-api Every second",
-      time: 1696486442000,
-    });
-    expect(destination.logs).toContainEqual({
-      currentRun: "2023-10-05T06:14:02.000Z",
-      level: 30,
-      msg: "Succeeded /some-api Every second",
-      status: 200,
-      text: "",
-      time: 1696486442000,
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Succeeded /some-api Every second",
+        status: 200,
+        text: "",
+        time: 1696486442000,
+      },
+    ]);
     destination.clear();
 
     await jest.advanceTimersByTimeAsync(1000);
@@ -223,24 +231,26 @@ describe("main", () => {
       })
     );
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(destination.logs).toContainEqual({
-      currentRun: "2023-10-05T06:14:03.000Z",
-      level: 30,
-      msg: "Started /some-api Every second",
-      time: 1696486443000,
-    });
-    expect(destination.logs).toContainEqual({
-      currentRun: "2023-10-05T06:14:03.000Z",
-      level: 30,
-      msg: "Succeeded /some-api Every second",
-      status: 200,
-      text: "",
-      time: 1696486443000,
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:03.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486443000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:03.000Z",
+        level: 30,
+        msg: "Succeeded /some-api Every second",
+        status: 200,
+        text: "",
+        time: 1696486443000,
+      },
+    ]);
   });
 
   it("misses CRON if config changes", async () => {
-    const { fs } = memfs(
+    const { fs, vol } = memfs(
       {
         "./vercel.json": JSON.stringify({
           crons: [{ path: "/some-api", schedule: "* * * * * *" }],
@@ -252,34 +262,37 @@ describe("main", () => {
     proc = main({
       destination,
       fs,
-      level: "trace",
       signal: controller.signal,
     });
 
     await jest.advanceTimersByTimeAsync(0);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(destination.logs).toContainEqual({
-      level: 30,
-      msg: "Scheduled /some-api Every second",
-      time: 1696486441293,
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        level: 30,
+        msg: "Scheduled /some-api Every second",
+        time: 1696486441293,
+      },
+    ]);
     destination.clear();
 
-    fs.writeFileSync("./vercel.json", JSON.stringify({}));
+    vol.fromNestedJSON({ "./vercel.json": JSON.stringify({}) }, process.cwd());
     await jest.advanceTimersByTimeAsync(0);
 
-    expect(destination.logs).toContainEqual({
-      config: "./vercel.json",
-      level: 30,
-      msg: "Config Changed",
-      time: 1696486441293,
-    });
-    expect(destination.logs).toContainEqual({
-      level: 30,
-      msg: "No CRONs Scheduled",
-      time: 1696486441293,
-    });
+    expect(destination.logs).toStrictEqual([
+      {
+        config: "./vercel.json",
+        level: 30,
+        msg: "Config Changed",
+        time: 1696486441293,
+      },
+      {
+        level: 30,
+        msg: "No CRONs Scheduled",
+        time: 1696486441293,
+      },
+    ]);
     destination.clear();
 
     await jest.advanceTimersByTimeAsync(100000);
