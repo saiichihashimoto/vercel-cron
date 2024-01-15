@@ -1,4 +1,5 @@
 import { exec as execCallback } from "node:child_process";
+import { setTimeout } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import {
@@ -9,16 +10,6 @@ import {
   it,
   jest,
 } from "@jest/globals";
-
-const setTimeout = (
-  delay?: number,
-  { signal }: { signal?: AbortSignal } = {}
-) =>
-  new Promise<void>((resolve) => {
-    global.setTimeout(resolve, delay);
-
-    signal?.addEventListener("abort", () => resolve());
-  });
 
 // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports, unicorn/prefer-module, @typescript-eslint/no-unused-vars -- HACK We're "including" bin by running a process against the built file so jest won't pick it up with `--findRelatedTests`.
 const helpJestFindRelatedTests = () => require("./vercel-cron");
@@ -63,6 +54,7 @@ Options:
   -s --secret <secret>  Cron Secret (default: \`process.env.CRON_SECRET\`)
   --dry                 Shows scheduled CRONs and quit
   --color               Show terminal colors (default: \`chalk.supportsColor\`)
+  --no-pretty           No pretty printing, just a JSON stream of logs
   -l --level <level>    Logging Level (choices: "trace", "debug", "info",
                         "warn", "error", "fatal", "silent", default: "info")
   --trace
@@ -76,20 +68,12 @@ Options:
 `);
   });
 
-  it("runs continuously", async () => {
+  it("runs forever", async () => {
     const winner = await Promise.race([
-      (async () => {
-        await setTimeout(500, { signal: controller.signal });
-
-        return "timeout";
-      })(),
-      (async () => {
-        await exec("ts-node ./src/vercel-cron.ts", {
-          signal: controller.signal,
-        });
-
-        return "exec";
-      })(),
+      setTimeout(500, "timeout", { signal: controller.signal }),
+      exec("ts-node ./src/vercel-cron.ts", {
+        signal: controller.signal,
+      }),
     ]);
 
     expect(winner).toBe("timeout");

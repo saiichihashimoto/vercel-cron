@@ -119,7 +119,14 @@
       {
         "autoFix": false,
         "cspell": {
-          "words": ["cronstrue", "encryptor", "pino", "unstash", "zeplo"]
+          "words": [
+            "cronstrue",
+            "encryptor",
+            "memfs",
+            "pino",
+            "unstash",
+            "zeplo"
+          ]
         }
       }
     ],

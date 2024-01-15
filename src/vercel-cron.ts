@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import chalk from "chalk";
 import { Command, Option } from "commander";
 
 import { defaults, main, zOpts } from ".";
@@ -23,13 +24,14 @@ import pkg from "../package.json";
         .option("--dry", "Shows scheduled CRONs and quit")
         .addOption(
           new Option("--color", "Show terminal colors").default(
-            defaults.color,
+            Boolean(chalk.supportsColor),
             "`chalk.supportsColor`"
           )
         )
         .addOption(
           new Option("--no-color").hideHelp().implies({ color: false })
         )
+        .option("--no-pretty", "No pretty printing, just a JSON stream of logs")
         .addOption(
           new Option("-l --level <level>", "Logging Level")
             .default(defaults.level)

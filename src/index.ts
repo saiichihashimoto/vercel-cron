@@ -35,40 +35,13 @@ const anySignal = (signals: Array<AbortSignal | null | undefined>) => {
   return controller.signal;
 };
 
-type MaybePromise<V> = Promise<V> | V;
-
-const ignoreAbortError = async <V>(
-  fn: Promise<V> | (() => MaybePromise<V>)
-): Promise<V | undefined> => {
-  try {
-    return await (fn instanceof Promise ? fn : fn());
-  } catch (error) {
-    if (
-      !z
-        .intersection(
-          z.instanceof(Error),
-          z.object({
-            cause: z.intersection(
-              z.instanceof(DOMException),
-              z.object({ name: z.literal("AbortError") })
-            ),
-          })
-        )
-        .safeParse(error).success
-    ) {
-      throw error;
-    }
-  }
-
-  return undefined;
-};
-
 export const zOpts = z
   .object({
     color: z.boolean(),
     config: z.string(),
     dry: z.boolean(),
     ignoreTimestamp: z.boolean(),
+    pretty: z.boolean(),
     secret: z.nullable(z.string()),
     url: z.string(),
     level: z.union([
@@ -84,7 +57,6 @@ export const zOpts = z
   .partial();
 
 export const defaults = {
-  color: Boolean(chalk.supportsColor),
   config: "./vercel.json",
   level: "info",
   secret: process.env.CRON_SECRET ?? null,
@@ -92,33 +64,62 @@ export const defaults = {
 } satisfies z.infer<typeof zOpts>;
 
 export const main = async ({
-  fs = fsNative,
+  destination,
   signal,
+  fs = fsNative,
   ...opts
-}: z.infer<typeof zOpts> & { fs?: typeof fsNative; signal?: AbortSignal }) => {
-  const { color, config, dry, ignoreTimestamp, level, secret, url } = {
+}: z.infer<typeof zOpts> & {
+  destination?: pino.DestinationStream;
+  fs?: typeof fsNative;
+  signal?: AbortSignal;
+}) => {
+  const {
+    config,
+    dry,
+    ignoreTimestamp,
+    level,
+    secret,
+    url,
+    color = false,
+    pretty = false,
+  } = {
     ...defaults,
     ...opts,
   };
 
-  const logger = pino({
+  if (chalk.supportsColor && !color) {
+    chalk.level = 0;
+  }
+
+  const loggerOptions = {
     level,
     timestamp: !ignoreTimestamp,
     errorKey: "error",
-    transport: {
-      target: "pino-pretty",
-      options: {
-        colorize: color,
-        float: "center",
-        levelFirst: true,
-        singleLine: true,
-        translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
-        ignore: "pid,hostname",
-      },
+    redact: {
+      paths: ["pid", "hostname"],
+      remove: true,
     },
-  });
+    ...(!pretty
+      ? {}
+      : {
+          transport: {
+            target: "pino-pretty",
+            options: {
+              colorize: color,
+              float: "center",
+              levelFirst: true,
+              singleLine: true,
+              translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
+            },
+          },
+        }),
+  };
 
-  if (logger.isLevelEnabled("info")) {
+  const logger = !destination
+    ? pino(loggerOptions)
+    : pino(loggerOptions, destination);
+
+  if (logger.isLevelEnabled("info") && pretty) {
     // eslint-disable-next-line no-console -- boxen!
     console.log(
       boxen("▲   Vercel CRON   ▲", {
@@ -132,79 +133,74 @@ export const main = async ({
 
   logger.trace({ opts }, "Parsed Options");
 
-  const readFile = promisify(fs.readFile);
+  const readFile = promisify(fs.readFile.bind(fs));
 
-  const scheduleCrons = () => {
+  const scheduleCrons = async () => {
     const controller = new AbortController();
 
-    (async () => {
-      const { crons: cronConfigs = [] } = z
-        .object({
-          crons: z.optional(
-            z.array(
-              z.object({
-                path: z.string(),
-                schedule: z.string(),
-              })
-            )
-          ),
-        })
-        .parse(JSON.parse((await readFile(config)).toString()));
+    const configContent = (await readFile(config)).toString();
+    logger.trace({ config: configContent }, "Config");
 
-      const crons = cronConfigs.map(({ path, schedule }) => {
-        const pathString = `${chalk.magenta(path)} ${chalk.yellow(
-          cronstrue.toString(schedule)
-        )}`;
+    const { crons: cronConfigs = [] } = z
+      .object({
+        crons: z.optional(
+          z.array(
+            z.object({
+              path: z.string(),
+              schedule: z.string(),
+            })
+          )
+        ),
+      })
+      .parse(JSON.parse(configContent));
 
-        const cron = Cron(schedule, { timezone: "UTC" }, async () => {
-          const runLogger = logger.child({ currentRun: cron.currentRun() });
-          runLogger.info(`Started ${pathString}`);
+    const crons = cronConfigs.map(({ path, schedule }) => {
+      const pathString = `${chalk.magenta(path)} ${chalk.yellow(
+        cronstrue.toString(schedule)
+      )}`;
 
-          let res: Response | undefined;
+      const cron = Cron(schedule, { timezone: "UTC" }, async () => {
+        const runLogger = logger.child({ currentRun: cron.currentRun() });
+        runLogger.info(`Started ${pathString}`);
 
-          try {
-            res = await ignoreAbortError(
-              fetch(url + path, {
-                method: "GET",
-                redirect: "manual",
-                signal: anySignal([signal, controller.signal]),
-                headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
-              })
-            );
-          } catch (error) {
-            runLogger.error({ error }, `Failed ${pathString}`);
+        let res: Response | undefined;
 
-            return;
-          }
+        try {
+          res = await fetch(url + path, {
+            method: "GET",
+            redirect: "manual",
+            signal: anySignal([signal, controller.signal]),
+            headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
+          });
+        } catch (error) {
+          runLogger.error({ error }, `Failed ${pathString}`);
 
-          if (!res) {
-            return;
-          }
+          return;
+        }
 
-          if (res.status >= 300) {
-            runLogger.error(
-              { status: res.status, error: new Error(await res.text()) },
-              `Failed ${pathString}`
-            );
-          } else {
-            runLogger.info(
-              { status: res.status, text: await res.text() },
-              `Succeeded ${pathString}`
-            );
-          }
-        });
-
-        controller.signal.addEventListener("abort", cron.stop.bind(cron));
-
-        logger.info(`Scheduled ${pathString}`);
-
-        return cron;
+        if (!res.ok) {
+          runLogger.error(
+            { status: res.status, error: new Error(await res.text()) },
+            `Failed ${pathString}`
+          );
+        } else {
+          runLogger.info(
+            { status: res.status, text: await res.text() },
+            `Succeeded ${pathString}`
+          );
+        }
       });
 
-      if (!crons.length) {
-        logger.info("No CRONs Scheduled");
-      }
-    })();
+      controller.signal.addEventListener("abort", cron.stop.bind(cron));
+
+      logger.info(`Scheduled ${pathString}`);
+
+      return cron;
+    });
+
+    if (!crons.length) {
+      logger.info("No CRONs Scheduled");
+    }
 
     return controller.abort.bind(controller);
   };
@@ -213,7 +209,7 @@ export const main = async ({
 
   let abortPrevious: (() => void) | undefined;
 
-  const handler = ((eventType, filename) => {
+  const handler = (async (eventType, filename) => {
     logger.trace({ eventType, filename }, "fs.watch");
 
     if (abortPrevious) {
@@ -221,7 +217,13 @@ export const main = async ({
     }
 
     abortPrevious?.();
-    abortPrevious = scheduleCrons();
+    try {
+      // eslint-disable-next-line require-atomic-updates -- HACK
+      abortPrevious = await scheduleCrons();
+    } catch (error) {
+      logger.fatal({ error }, "Failed to Schedule CRONs");
+      abortPrevious?.();
+    }
   }) satisfies Parameters<typeof fs.watch>[1];
 
   handler("rename", config);
