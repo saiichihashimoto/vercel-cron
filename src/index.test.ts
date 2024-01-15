@@ -121,6 +121,12 @@ describe("main", () => {
     expect(winner).toBe("timeout");
     expect(destination.logs).toStrictEqual([
       {
+        config: "./vercel.json",
+        level: 20,
+        time: 1696486441293,
+        msg: "Watching Config",
+      },
+      {
         level: 30,
         time: 1696486441293,
         msg: "No CRONs Scheduled",
@@ -154,6 +160,12 @@ describe("main", () => {
     expect(winner).not.toBe("timeout");
     expect(destination.logs).toStrictEqual([
       {
+        config: "./vercel.json",
+        level: 20,
+        time: 1696486441293,
+        msg: "Watching Config",
+      },
+      {
         level: 30,
         time: 1696486441293,
         msg: "No CRONs Scheduled",
@@ -181,6 +193,12 @@ describe("main", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(destination.logs).toStrictEqual([
+      {
+        config: "./vercel.json",
+        level: 20,
+        time: 1696486441293,
+        msg: "Watching Config",
+      },
       {
         level: 30,
         msg: "Scheduled /some-api Every second",
@@ -269,6 +287,12 @@ describe("main", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(destination.logs).toStrictEqual([
+      {
+        config: "./vercel.json",
+        level: 20,
+        time: 1696486441293,
+        msg: "Watching Config",
+      },
       {
         level: 30,
         msg: "Scheduled /some-api Every second",

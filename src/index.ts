@@ -59,7 +59,6 @@ export const zOpts = z
 
 export const defaults = {
   config: "./vercel.json",
-  level: "info",
   secret: process.env.CRON_SECRET ?? null,
   url: "http://localhost:3000",
 } satisfies z.infer<typeof zOpts>;
@@ -78,10 +77,10 @@ export const main = async ({
     config,
     dry,
     ignoreTimestamp,
-    level,
     secret,
     url,
     color = false,
+    level = "debug",
     pretty = false,
   } = {
     ...defaults,
