@@ -34,7 +34,7 @@ import pkg from "../package.json";
         .option("--no-pretty", "No pretty printing, just a JSON stream of logs")
         .addOption(
           new Option("-l --level <level>", "Logging Level")
-            .default(defaults.level)
+            .default("info")
             .choices([
               "trace",
               "debug",
