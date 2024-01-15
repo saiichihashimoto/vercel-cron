@@ -1,4 +1,5 @@
-import fs from "node:fs/promises";
+import fs from "node:fs";
+import { promisify } from "node:util";
 
 import boxen from "boxen";
 import chalk from "chalk";
@@ -8,6 +9,8 @@ import pino from "pino";
 import z from "zod";
 
 type MaybePromise<V> = Promise<V> | V;
+
+const readFile = promisify(fs.readFile);
 
 const ignoreAbortError = async <V>(
   fn: Promise<V> | (() => MaybePromise<V>)
@@ -33,18 +36,6 @@ const ignoreAbortError = async <V>(
   }
 
   return undefined;
-};
-
-const unshiftIterable = async function* <T>(
-  value: T,
-  iterable: AsyncIterable<T>
-) {
-  yield value;
-
-  // eslint-disable-next-line no-restricted-syntax, fp/no-loops -- Generator loop
-  for await (const value of iterable) {
-    yield value;
-  }
 };
 
 export const zOpts = z
@@ -112,75 +103,77 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
 
   logger.trace({ opts }, "Parsed Options");
 
-  const watchConfig = async () => {
-    const { crons: cronConfigs = [] } = z
-      .object({
-        crons: z.optional(
-          z.array(
-            z.object({
-              path: z.string(),
-              schedule: z.string(),
-            })
-          )
-        ),
-      })
-      .parse(JSON.parse((await fs.readFile(config)).toString()));
-
+  const scheduleCrons = () => {
     const abortController = new AbortController();
 
-    const crons = cronConfigs.map(({ path, schedule }) => {
-      const pathString = `${chalk.magenta(path)} ${chalk.yellow(
-        cronstrue.toString(schedule)
-      )}`;
+    (async () => {
+      const { crons: cronConfigs = [] } = z
+        .object({
+          crons: z.optional(
+            z.array(
+              z.object({
+                path: z.string(),
+                schedule: z.string(),
+              })
+            )
+          ),
+        })
+        .parse(JSON.parse((await readFile(config)).toString()));
 
-      const cron = Cron(schedule, { timezone: "UTC" }, async () => {
-        const runLogger = logger.child({ currentRun: cron.currentRun() });
-        runLogger.info(`Started ${pathString}`);
+      const crons = cronConfigs.map(({ path, schedule }) => {
+        const pathString = `${chalk.magenta(path)} ${chalk.yellow(
+          cronstrue.toString(schedule)
+        )}`;
 
-        let res: Response | undefined;
+        const cron = Cron(schedule, { timezone: "UTC" }, async () => {
+          const runLogger = logger.child({ currentRun: cron.currentRun() });
+          runLogger.info(`Started ${pathString}`);
 
-        try {
-          res = await ignoreAbortError(
-            fetch(url + path, {
-              method: "GET",
-              redirect: "manual",
-              signal: abortController.signal,
-              headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
-            })
-          );
-        } catch (error) {
-          runLogger.error({ error }, `Failed ${pathString}`);
+          let res: Response | undefined;
 
-          return;
-        }
+          try {
+            res = await ignoreAbortError(
+              fetch(url + path, {
+                method: "GET",
+                redirect: "manual",
+                signal: abortController.signal,
+                headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
+              })
+            );
+          } catch (error) {
+            runLogger.error({ error }, `Failed ${pathString}`);
 
-        if (!res) {
-          return;
-        }
+            return;
+          }
 
-        if (res.status >= 300) {
-          runLogger.error(
-            { status: res.status, error: new Error(await res.text()) },
-            `Failed ${pathString}`
-          );
-        } else {
-          runLogger.info(
-            { status: res.status, text: await res.text() },
-            `Succeeded ${pathString}`
-          );
-        }
+          if (!res) {
+            return;
+          }
+
+          if (res.status >= 300) {
+            runLogger.error(
+              { status: res.status, error: new Error(await res.text()) },
+              `Failed ${pathString}`
+            );
+          } else {
+            runLogger.info(
+              { status: res.status, text: await res.text() },
+              `Succeeded ${pathString}`
+            );
+          }
+        });
+
+        abortController.signal.addEventListener("abort", cron.stop.bind(cron));
+
+        logger.info(`Scheduled ${pathString}`);
+
+        return cron;
       });
 
-      abortController.signal.addEventListener("abort", cron.stop.bind(cron));
-
-      logger.info(`Scheduled ${pathString}`);
-
-      return cron;
-    });
-
-    if (!crons.length) {
-      logger.info("No CRONs Scheduled");
-    }
+      if (!crons.length) {
+        logger.info("No CRONs Scheduled");
+      }
+    })();
 
     return abortController.abort.bind(abortController);
   };
@@ -189,23 +182,22 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
 
   let abortPrevious: (() => void) | undefined;
 
-  // eslint-disable-next-line no-restricted-syntax, fp/no-loops -- Generator loop
-  for await (const value of unshiftIterable(
-    { eventType: "rename", filename: config },
-    fs.watch(config, { persistent: true })
-  )) {
+  const handler = ((eventType, filename) => {
+    logger.trace({ eventType, filename }, "fs.watch");
+
     if (abortPrevious) {
-      logger.trace(value, "fs.watch");
       logger.info({ config }, "Config Changed");
     }
 
     abortPrevious?.();
-    abortPrevious = await watchConfig();
+    abortPrevious = scheduleCrons();
+  }) satisfies Parameters<typeof fs.watch>[1];
 
-    if (dry) {
-      break;
-    }
+  handler("rename", config);
+
+  if (dry) {
+    return;
   }
 
-  abortPrevious?.();
+  fs.watch(config, handler);
 };
