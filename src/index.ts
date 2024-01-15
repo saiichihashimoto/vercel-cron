@@ -7,6 +7,7 @@ import { Cron } from "croner";
 import cronstrue from "cronstrue";
 import { debounce } from "lodash/fp";
 import pino from "pino";
+import type { LoggerOptions } from "pino";
 import z from "zod";
 
 import { anySignal } from "./utils";
@@ -88,7 +89,7 @@ export const main = async ({
             },
           },
         }),
-  };
+  } satisfies LoggerOptions;
 
   const logger = !destination
     ? pino(loggerOptions)

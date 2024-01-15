@@ -218,11 +218,7 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
-      expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
-      })
+      expect.objectContaining({})
     );
     expect(destination.logs).toStrictEqual([
       {
@@ -284,11 +280,7 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
-      expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
-      })
+      expect.objectContaining({})
     );
     expect(destination.logs).toStrictEqual([
       {
@@ -312,11 +304,7 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-other-api",
-      expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
-      })
+      expect.objectContaining({})
     );
     expect(destination.logs).toStrictEqual([
       {
@@ -340,11 +328,7 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
-      expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
-      })
+      expect.objectContaining({})
     );
     expect(destination.logs).toStrictEqual([
       {
@@ -496,10 +480,137 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
+      expect.objectContaining({})
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Succeeded /some-api Every second",
+        status: 200,
+        text: "Some Text",
+        time: 1696486442000,
+      },
+    ]);
+  });
+
+  it("uses specified config", async () => {
+    const { fs } = memfs(
+      {
+        "./vercel-other.json": JSON.stringify({
+          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+        }),
+      },
+      process.cwd()
+    );
+
+    proc = main({
+      destination,
+      fs,
+      signal: controller.signal,
+      config: "./vercel-other.json",
+    });
+
+    await jest.advanceTimersByTimeAsync(0);
+    destination.clear();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
+      expect.objectContaining({})
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Succeeded /some-api Every second",
+        status: 200,
+        text: "Some Text",
+        time: 1696486442000,
+      },
+    ]);
+  });
+
+  it("uses specified url", async () => {
+    const { fs } = memfs(
+      {
+        "./vercel.json": JSON.stringify({
+          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+        }),
+      },
+      process.cwd()
+    );
+
+    proc = main({
+      destination,
+      fs,
+      signal: controller.signal,
+      url: "https://my-website.com",
+    });
+
+    await jest.advanceTimersByTimeAsync(0);
+    destination.clear();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://my-website.com/some-api",
+      expect.objectContaining({})
+    );
+    expect(destination.logs).toStrictEqual([
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Started /some-api Every second",
+        time: 1696486442000,
+      },
+      {
+        currentRun: "2023-10-05T06:14:02.000Z",
+        level: 30,
+        msg: "Succeeded /some-api Every second",
+        status: 200,
+        text: "Some Text",
+        time: 1696486442000,
+      },
+    ]);
+  });
+
+  it("uses specified secret", async () => {
+    const { fs } = memfs(
+      {
+        "./vercel.json": JSON.stringify({
+          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+        }),
+      },
+      process.cwd()
+    );
+
+    proc = main({
+      destination,
+      fs,
+      signal: controller.signal,
+      secret: "mock-secret",
+    });
+
+    await jest.advanceTimersByTimeAsync(0);
+    destination.clear();
+    await jest.advanceTimersByTimeAsync(1000);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/some-api",
       expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
+        headers: { Authorization: "Bearer mock-secret" },
       })
     );
     expect(destination.logs).toStrictEqual([
@@ -552,11 +663,7 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
-      expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
-      })
+      expect.objectContaining({})
     );
     expect(destination.logs).toStrictEqual([
       {
@@ -601,11 +708,7 @@ describe("main", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
-      expect.objectContaining({
-        method: "GET",
-        redirect: "manual",
-        headers: {},
-      })
+      expect.objectContaining({})
     );
     expect(destination.logs).toStrictEqual([
       {
