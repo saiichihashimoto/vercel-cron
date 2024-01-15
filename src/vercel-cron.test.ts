@@ -1,29 +1,48 @@
 import { exec as execCallback } from "node:child_process";
+import { setTimeout } from "node:timers/promises";
 import { promisify } from "node:util";
 
-import { beforeAll, describe, expect, it } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 
 // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports, unicorn/prefer-module, @typescript-eslint/no-unused-vars -- HACK We're "including" bin by running a process against the built file so jest won't pick it up with `--findRelatedTests`.
 const helpJestFindRelatedTests = () => require("./vercel-cron");
 
-const exec = promisify(execCallback);
+jest.useRealTimers();
 
 describe("vercel-cron", () => {
-  beforeAll(async () => {
-    await exec("npm run build");
+  const exec = promisify(execCallback);
+  let controller: AbortController;
+
+  beforeEach(() => {
+    controller = new AbortController();
   });
 
-  it("--version", async () => {
+  afterEach(() => {
+    controller.abort();
+  });
+
+  it("prints version", async () => {
     const { stderr, stdout } = await exec(
-      "node ./dist/vercel-cron.js --version"
+      "ts-node ./src/vercel-cron.ts --version",
+      { signal: controller.signal }
     );
 
     expect(stderr).toBe("");
     expect(stdout).toBe("0.0.0-development\n");
   });
 
-  it("--help", async () => {
-    const { stderr, stdout } = await exec("node ./dist/vercel-cron.js --help");
+  it("prints help", async () => {
+    const { stderr, stdout } = await exec(
+      "ts-node ./src/vercel-cron.ts --help",
+      { signal: controller.signal }
+    );
 
     expect(stderr).toBe("");
     expect(stdout).toBe(`Usage: vercel-cron [options]
@@ -35,6 +54,7 @@ Options:
   -s --secret <secret>  Cron Secret (default: \`process.env.CRON_SECRET\`)
   --dry                 Shows scheduled CRONs and quit
   --color               Show terminal colors (default: \`chalk.supportsColor\`)
+  --no-pretty           No pretty printing, just a JSON stream of logs
   -l --level <level>    Logging Level (choices: "trace", "debug", "info",
                         "warn", "error", "fatal", "silent", default: "info")
   --trace
@@ -48,9 +68,21 @@ Options:
 `);
   });
 
-  it("runs without error", async () => {
+  it("runs forever", async () => {
+    const winner = await Promise.race([
+      setTimeout(500, "timeout", { signal: controller.signal }),
+      exec("ts-node ./src/vercel-cron.ts", {
+        signal: controller.signal,
+      }),
+    ]);
+
+    expect(winner).toBe("timeout");
+  });
+
+  it("prints banner", async () => {
     const { stderr, stdout } = await exec(
-      "node ./dist/vercel-cron.js --ignoreTimestamp --dry --no-color"
+      "ts-node ./src/vercel-cron.ts --ignoreTimestamp --dry --no-color",
+      { signal: controller.signal }
     );
 
     expect(stderr).toBe("");

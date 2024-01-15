@@ -1,4 +1,5 @@
-import fs from "node:fs/promises";
+import fsNative from "node:fs";
+import { promisify } from "node:util";
 
 import boxen from "boxen";
 import chalk from "chalk";
@@ -7,44 +8,31 @@ import cronstrue from "cronstrue";
 import pino from "pino";
 import z from "zod";
 
-type MaybePromise<V> = Promise<V> | V;
+// TODO [engine:node@>=20.3.0]: Replace with AbortSignal.any
+const anySignal = (signals: Array<AbortSignal | null | undefined>) => {
+  const controller = new globalThis.AbortController();
 
-const ignoreAbortError = async <V>(
-  fn: Promise<V> | (() => MaybePromise<V>)
-): Promise<V | undefined> => {
-  try {
-    return await (fn instanceof Promise ? fn : fn());
-  } catch (error) {
-    if (
-      !z
-        .intersection(
-          z.instanceof(Error),
-          z.object({
-            cause: z.intersection(
-              z.instanceof(DOMException),
-              z.object({ name: z.literal("AbortError") })
-            ),
-          })
-        )
-        .safeParse(error).success
-    ) {
-      throw error;
+  const onAbort = () => {
+    controller.abort();
+
+    signals.forEach((signal) => {
+      if (signal?.removeEventListener) {
+        signal.removeEventListener("abort", onAbort);
+      }
+    });
+  };
+
+  signals.forEach((signal) => {
+    if (signal?.addEventListener) {
+      signal.addEventListener("abort", onAbort);
     }
+  });
+
+  if (signals.some((signal) => signal?.aborted)) {
+    onAbort();
   }
 
-  return undefined;
-};
-
-const unshiftIterable = async function* <T>(
-  value: T,
-  iterable: AsyncIterable<T>
-) {
-  yield value;
-
-  // eslint-disable-next-line no-restricted-syntax, fp/no-loops -- Generator loop
-  for await (const value of iterable) {
-    yield value;
-  }
+  return controller.signal;
 };
 
 export const zOpts = z
@@ -53,6 +41,7 @@ export const zOpts = z
     config: z.string(),
     dry: z.boolean(),
     ignoreTimestamp: z.boolean(),
+    pretty: z.boolean(),
     secret: z.nullable(z.string()),
     url: z.string(),
     level: z.union([
@@ -68,37 +57,69 @@ export const zOpts = z
   .partial();
 
 export const defaults = {
-  color: Boolean(chalk.supportsColor),
   config: "./vercel.json",
   level: "info",
   secret: process.env.CRON_SECRET ?? null,
   url: "http://localhost:3000",
 } satisfies z.infer<typeof zOpts>;
 
-export const main = async (opts: z.infer<typeof zOpts> = {}) => {
-  const { color, config, dry, ignoreTimestamp, level, secret, url } = {
+export const main = async ({
+  destination,
+  signal,
+  fs = fsNative,
+  ...opts
+}: z.infer<typeof zOpts> & {
+  destination?: pino.DestinationStream;
+  fs?: typeof fsNative;
+  signal?: AbortSignal;
+}) => {
+  const {
+    config,
+    dry,
+    ignoreTimestamp,
+    level,
+    secret,
+    url,
+    color = false,
+    pretty = false,
+  } = {
     ...defaults,
     ...opts,
   };
 
-  const logger = pino({
+  if (chalk.supportsColor && !color) {
+    chalk.level = 0;
+  }
+
+  const loggerOptions = {
     level,
     timestamp: !ignoreTimestamp,
     errorKey: "error",
-    transport: {
-      target: "pino-pretty",
-      options: {
-        colorize: color,
-        float: "center",
-        levelFirst: true,
-        singleLine: true,
-        translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
-        ignore: "pid,hostname",
-      },
+    redact: {
+      paths: ["pid", "hostname"],
+      remove: true,
     },
-  });
+    ...(!pretty
+      ? {}
+      : {
+          transport: {
+            target: "pino-pretty",
+            options: {
+              colorize: color,
+              float: "center",
+              levelFirst: true,
+              singleLine: true,
+              translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
+            },
+          },
+        }),
+  };
 
-  if (logger.isLevelEnabled("fatal")) {
+  const logger = !destination
+    ? pino(loggerOptions)
+    : pino(loggerOptions, destination);
+
+  if (logger.isLevelEnabled("info") && pretty) {
     // eslint-disable-next-line no-console -- boxen!
     console.log(
       boxen("▲   Vercel CRON   ▲", {
@@ -112,7 +133,14 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
 
   logger.trace({ opts }, "Parsed Options");
 
-  const watchConfig = async () => {
+  const readFile = promisify(fs.readFile.bind(fs));
+
+  const scheduleCrons = async () => {
+    const controller = new AbortController();
+
+    const configContent = (await readFile(config)).toString();
+    logger.trace({ config: configContent }, "Config");
+
     const { crons: cronConfigs = [] } = z
       .object({
         crons: z.optional(
@@ -124,9 +152,7 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
           )
         ),
       })
-      .parse(JSON.parse((await fs.readFile(config)).toString()));
-
-    const abortController = new AbortController();
+      .parse(JSON.parse(configContent));
 
     const crons = cronConfigs.map(({ path, schedule }) => {
       const pathString = `${chalk.magenta(path)} ${chalk.yellow(
@@ -140,25 +166,19 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
         let res: Response | undefined;
 
         try {
-          res = await ignoreAbortError(
-            fetch(url + path, {
-              method: "GET",
-              redirect: "manual",
-              signal: abortController.signal,
-              headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
-            })
-          );
+          res = await fetch(url + path, {
+            method: "GET",
+            redirect: "manual",
+            signal: anySignal([signal, controller.signal]),
+            headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
+          });
         } catch (error) {
           runLogger.error({ error }, `Failed ${pathString}`);
 
           return;
         }
 
-        if (!res) {
-          return;
-        }
-
-        if (res.status >= 300) {
+        if (!res.ok) {
           runLogger.error(
             { status: res.status, error: new Error(await res.text()) },
             `Failed ${pathString}`
@@ -171,7 +191,7 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
         }
       });
 
-      abortController.signal.addEventListener("abort", cron.stop.bind(cron));
+      controller.signal.addEventListener("abort", cron.stop.bind(cron));
 
       logger.info(`Scheduled ${pathString}`);
 
@@ -182,30 +202,39 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
       logger.info("No CRONs Scheduled");
     }
 
-    return abortController.abort.bind(abortController);
+    return controller.abort.bind(controller);
   };
 
   logger.debug({ config }, "Watching Config");
 
   let abortPrevious: (() => void) | undefined;
 
-  // eslint-disable-next-line no-restricted-syntax, fp/no-loops -- Generator loop
-  for await (const value of unshiftIterable(
-    { eventType: "rename", filename: config },
-    fs.watch(config, { persistent: true })
-  )) {
+  const handler = (async (eventType, filename) => {
+    logger.trace({ eventType, filename }, "fs.watch");
+
     if (abortPrevious) {
-      logger.trace(value, "fs.watch");
       logger.info({ config }, "Config Changed");
     }
 
     abortPrevious?.();
-    abortPrevious = await watchConfig();
-
-    if (dry) {
-      break;
+    try {
+      // eslint-disable-next-line require-atomic-updates -- HACK
+      abortPrevious = await scheduleCrons();
+    } catch (error) {
+      logger.fatal({ error }, "Failed to Schedule CRONs");
+      abortPrevious?.();
     }
+  }) satisfies Parameters<typeof fs.watch>[1];
+
+  handler("rename", config);
+
+  if (dry) {
+    abortPrevious?.();
+
+    return;
   }
 
-  abortPrevious?.();
+  const watcher = fs.watch(config, { signal }, handler);
+
+  await promisify(watcher.on.bind(watcher))("close");
 };

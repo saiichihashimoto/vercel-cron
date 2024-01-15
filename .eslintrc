@@ -119,7 +119,14 @@
       {
         "autoFix": false,
         "cspell": {
-          "words": ["cronstrue", "encryptor", "pino", "unstash", "zeplo"]
+          "words": [
+            "cronstrue",
+            "encryptor",
+            "memfs",
+            "pino",
+            "unstash",
+            "zeplo"
+          ]
         }
       }
     ],
@@ -239,6 +246,7 @@
     "unicorn/explicit-length-check": "off",
     "unicorn/import-style": "off",
     "unicorn/no-array-callback-reference": "off",
+    "unicorn/no-array-for-each": "off",
     "unicorn/no-array-method-this-argument": "off",
     "unicorn/no-array-reduce": "off",
     "unicorn/no-await-expression-member": "off",
@@ -250,7 +258,7 @@
     "unicorn/numeric-separators-style": "off",
     "unicorn/prefer-at": "error",
     "unicorn/prefer-json-parse-buffer": "error",
-    "unicorn/prefer-node-protocol": "off",
+    "unicorn/prefer-node-protocol": "error",
     "unicorn/prefer-string-replace-all": "error",
     "unicorn/prefer-top-level-await": "off",
     "unicorn/prefer-type-error": "off",
