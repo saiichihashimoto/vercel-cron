@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fsNative from "node:fs";
 import { promisify } from "node:util";
 
 import boxen from "boxen";
@@ -8,9 +8,34 @@ import cronstrue from "cronstrue";
 import pino from "pino";
 import z from "zod";
 
-type MaybePromise<V> = Promise<V> | V;
+// TODO [engine:node@>=20.3.0]: Replace with AbortSignal.any
+const anySignal = (signals: Array<AbortSignal | null | undefined>) => {
+  const controller = new globalThis.AbortController();
 
-const readFile = promisify(fs.readFile);
+  const onAbort = () => {
+    controller.abort();
+
+    signals.forEach((signal) => {
+      if (signal?.removeEventListener) {
+        signal.removeEventListener("abort", onAbort);
+      }
+    });
+  };
+
+  signals.forEach((signal) => {
+    if (signal?.addEventListener) {
+      signal.addEventListener("abort", onAbort);
+    }
+  });
+
+  if (signals.some((signal) => signal?.aborted)) {
+    onAbort();
+  }
+
+  return controller.signal;
+};
+
+type MaybePromise<V> = Promise<V> | V;
 
 const ignoreAbortError = async <V>(
   fn: Promise<V> | (() => MaybePromise<V>)
@@ -66,7 +91,11 @@ export const defaults = {
   url: "http://localhost:3000",
 } satisfies z.infer<typeof zOpts>;
 
-export const main = async (opts: z.infer<typeof zOpts> = {}) => {
+export const main = async ({
+  fs = fsNative,
+  signal,
+  ...opts
+}: z.infer<typeof zOpts> & { fs?: typeof fsNative; signal?: AbortSignal }) => {
   const { color, config, dry, ignoreTimestamp, level, secret, url } = {
     ...defaults,
     ...opts,
@@ -89,7 +118,7 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
     },
   });
 
-  if (logger.isLevelEnabled("fatal")) {
+  if (logger.isLevelEnabled("info")) {
     // eslint-disable-next-line no-console -- boxen!
     console.log(
       boxen("▲   Vercel CRON   ▲", {
@@ -103,8 +132,10 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
 
   logger.trace({ opts }, "Parsed Options");
 
+  const readFile = promisify(fs.readFile);
+
   const scheduleCrons = () => {
-    const abortController = new AbortController();
+    const controller = new AbortController();
 
     (async () => {
       const { crons: cronConfigs = [] } = z
@@ -136,7 +167,7 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
               fetch(url + path, {
                 method: "GET",
                 redirect: "manual",
-                signal: abortController.signal,
+                signal: anySignal([signal, controller.signal]),
                 headers: !secret ? {} : { Authorization: `Bearer ${secret}` },
               })
             );
@@ -163,7 +194,7 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
           }
         });
 
-        abortController.signal.addEventListener("abort", cron.stop.bind(cron));
+        controller.signal.addEventListener("abort", cron.stop.bind(cron));
 
         logger.info(`Scheduled ${pathString}`);
 
@@ -175,7 +206,7 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
       }
     })();
 
-    return abortController.abort.bind(abortController);
+    return controller.abort.bind(controller);
   };
 
   logger.debug({ config }, "Watching Config");
@@ -196,8 +227,12 @@ export const main = async (opts: z.infer<typeof zOpts> = {}) => {
   handler("rename", config);
 
   if (dry) {
+    abortPrevious?.();
+
     return;
   }
 
-  fs.watch(config, handler);
+  const watcher = fs.watch(config, { signal }, handler);
+
+  await promisify(watcher.on.bind(watcher))("close");
 };
