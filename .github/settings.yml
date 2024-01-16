@@ -2,7 +2,7 @@
 _extends: .github
 repository:
   name: vercel-cron
-  description: TODO
+  description: Vercel Crons for local development
   private: false
 branches:
   - name: main
