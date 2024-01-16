@@ -117,6 +117,12 @@ describe("main", () => {
     expect(winner).toBe("timeout");
     expect(destination.logs).toStrictEqual([
       {
+        level: 20,
+        loadedEnvFiles: [],
+        msg: "Loaded Env Files",
+        time: 1696486441293,
+      },
+      {
         config: "./vercel.json",
         level: 20,
         time: 1696486441293,
@@ -147,6 +153,12 @@ describe("main", () => {
     expect(winner).not.toBe("timeout");
     expect(destination.logs).toStrictEqual([
       {
+        level: 20,
+        loadedEnvFiles: [],
+        msg: "Loaded Env Files",
+        time: 1696486441293,
+      },
+      {
         config: "./vercel.json",
         level: 20,
         time: 1696486441293,
@@ -172,6 +184,12 @@ describe("main", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(destination.logs).toStrictEqual([
+      {
+        level: 20,
+        loadedEnvFiles: [],
+        msg: "Loaded Env Files",
+        time: 1696486441293,
+      },
       {
         config: "./vercel.json",
         level: 20,
@@ -257,6 +275,12 @@ describe("main", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(destination.logs).toStrictEqual([
+      {
+        level: 20,
+        loadedEnvFiles: [],
+        msg: "Loaded Env Files",
+        time: 1696486441293,
+      },
       {
         config: "./vercel.json",
         level: 20,
@@ -366,6 +390,12 @@ describe("main", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(destination.logs).toStrictEqual([
       {
+        level: 20,
+        loadedEnvFiles: [],
+        msg: "Loaded Env Files",
+        time: 1696486441293,
+      },
+      {
         config: "./vercel.json",
         level: 20,
         time: 1696486441293,
@@ -411,6 +441,12 @@ describe("main", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(destination.logs).toStrictEqual([
+      {
+        level: 20,
+        loadedEnvFiles: [],
+        msg: "Loaded Env Files",
+        time: 1696486441293,
+      },
       {
         config: "./vercel.json",
         level: 20,

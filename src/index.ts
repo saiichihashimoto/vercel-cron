@@ -1,6 +1,7 @@
 import fsNative from "node:fs";
 import { promisify } from "node:util";
 
+import { loadEnvConfig } from "@next/env";
 import boxen from "boxen";
 import chalk from "chalk";
 import { Cron } from "croner";
@@ -19,7 +20,7 @@ export const zOpts = z
     dry: z.boolean(),
     ignoreTimestamp: z.boolean(),
     pretty: z.boolean(),
-    secret: z.nullable(z.string()),
+    secret: z.optional(z.nullable(z.string())),
     url: z.string(),
     level: z.union([
       z.literal("trace"),
@@ -35,7 +36,6 @@ export const zOpts = z
 
 export const defaults = {
   config: "./vercel.json",
-  secret: process.env.CRON_SECRET ?? null,
   url: "http://localhost:3000",
 } satisfies z.infer<typeof zOpts>;
 
@@ -49,19 +49,7 @@ export const main = async ({
   fs?: typeof fsNative;
   signal?: AbortSignal;
 }) => {
-  const {
-    color,
-    config,
-    dry,
-    ignoreTimestamp,
-    pretty,
-    secret,
-    url,
-    level = "debug",
-  } = {
-    ...defaults,
-    ...opts,
-  };
+  const { color, dry, ignoreTimestamp, pretty, level = "debug" } = opts;
 
   if (chalk.supportsColor && !color) {
     chalk.level = 0;
@@ -95,6 +83,19 @@ export const main = async ({
     ? pino(loggerOptions)
     : pino(loggerOptions, destination);
 
+  const { loadedEnvFiles } = loadEnvConfig(process.cwd(), false, logger);
+
+  const {
+    config,
+    url,
+    secret: secretNullable,
+  } = {
+    ...defaults,
+    ...opts,
+  };
+
+  const secret = secretNullable ?? process.env.CRON_SECRET;
+
   if (logger.isLevelEnabled("info") && pretty) {
     /* eslint-disable no-console -- boxen! */
     console.log(
@@ -109,6 +110,7 @@ export const main = async ({
   }
 
   logger.trace({ opts }, "Parsed Options");
+  logger.debug({ loadedEnvFiles }, "Loaded Env Files");
 
   const readFile = promisify(fs.readFile.bind(fs));
 
