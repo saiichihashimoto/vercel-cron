@@ -160,7 +160,7 @@ describe("main", () => {
     const { fs } = memfs(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -180,13 +180,13 @@ describe("main", () => {
       },
       {
         level: 30,
-        msg: "Scheduled /some-api Every second",
+        msg: "Scheduled /some-api Every minute",
         time: 1696486441293,
       },
     ]);
     destination.clear();
 
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -198,23 +198,23 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api Every second",
+        msg: "Succeeded /some-api Every minute",
         status: 200,
         text: "Some Text",
-        time: 1696486442000,
+        time: 1696486500000,
       },
     ]);
     destination.clear();
 
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -222,18 +222,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:03.000Z",
+        currentRun: "2023-10-05T06:16:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486443000,
+        msg: "Started /some-api Every minute",
+        time: 1696486560000,
       },
       {
-        currentRun: "2023-10-05T06:14:03.000Z",
+        currentRun: "2023-10-05T06:16:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api Every second",
+        msg: "Succeeded /some-api Every minute",
         status: 200,
         text: "Some Text",
-        time: 1696486443000,
+        time: 1696486560000,
       },
     ]);
   });
@@ -243,8 +243,8 @@ describe("main", () => {
       {
         "./vercel.json": JSON.stringify({
           crons: [
-            { path: "/some-api", schedule: "2,4 * * * * *" },
-            { path: "/some-other-api", schedule: "3 * * * * *" },
+            { path: "/some-api", schedule: "15,17 * * * *" },
+            { path: "/some-other-api", schedule: "16 * * * *" },
           ],
         }),
       },
@@ -265,18 +265,18 @@ describe("main", () => {
       },
       {
         level: 30,
-        msg: "Scheduled /some-api At 2 and 4 seconds past the minute",
+        msg: "Scheduled /some-api At 15 and 17 minutes past the hour",
         time: 1696486441293,
       },
       {
         level: 30,
-        msg: "Scheduled /some-other-api At 3 seconds past the minute",
+        msg: "Scheduled /some-other-api At 16 minutes past the hour",
         time: 1696486441293,
       },
     ]);
     destination.clear();
 
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -284,23 +284,23 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api At 2 and 4 seconds past the minute",
-        time: 1696486442000,
+        msg: "Started /some-api At 15 and 17 minutes past the hour",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api At 2 and 4 seconds past the minute",
+        msg: "Succeeded /some-api At 15 and 17 minutes past the hour",
         status: 200,
         text: "Some Text",
-        time: 1696486442000,
+        time: 1696486500000,
       },
     ]);
     destination.clear();
 
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-other-api",
@@ -308,23 +308,23 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:03.000Z",
+        currentRun: "2023-10-05T06:16:00.000Z",
         level: 30,
-        msg: "Started /some-other-api At 3 seconds past the minute",
-        time: 1696486443000,
+        msg: "Started /some-other-api At 16 minutes past the hour",
+        time: 1696486560000,
       },
       {
-        currentRun: "2023-10-05T06:14:03.000Z",
+        currentRun: "2023-10-05T06:16:00.000Z",
         level: 30,
-        msg: "Succeeded /some-other-api At 3 seconds past the minute",
+        msg: "Succeeded /some-other-api At 16 minutes past the hour",
         status: 200,
         text: "Some Text",
-        time: 1696486443000,
+        time: 1696486560000,
       },
     ]);
     destination.clear();
 
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -332,18 +332,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:04.000Z",
+        currentRun: "2023-10-05T06:17:00.000Z",
         level: 30,
-        msg: "Started /some-api At 2 and 4 seconds past the minute",
-        time: 1696486444000,
+        msg: "Started /some-api At 15 and 17 minutes past the hour",
+        time: 1696486620000,
       },
       {
-        currentRun: "2023-10-05T06:14:04.000Z",
+        currentRun: "2023-10-05T06:17:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api At 2 and 4 seconds past the minute",
+        msg: "Succeeded /some-api At 15 and 17 minutes past the hour",
         status: 200,
         text: "Some Text",
-        time: 1696486444000,
+        time: 1696486620000,
       },
     ]);
     destination.clear();
@@ -353,7 +353,7 @@ describe("main", () => {
     const { fs, vol } = memfs(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -373,7 +373,7 @@ describe("main", () => {
       },
       {
         level: 30,
-        msg: "Scheduled /some-api Every second",
+        msg: "Scheduled /some-api Every minute",
         time: 1696486441293,
       },
     ]);
@@ -454,7 +454,7 @@ describe("main", () => {
     vol.fromNestedJSON(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -470,13 +470,13 @@ describe("main", () => {
       },
       {
         level: 30,
-        msg: "Scheduled /some-api Every second",
+        msg: "Scheduled /some-api Every minute",
         time: 1696486441293,
       },
     ]);
     destination.clear();
 
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -484,18 +484,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api Every second",
+        msg: "Succeeded /some-api Every minute",
         status: 200,
         text: "Some Text",
-        time: 1696486442000,
+        time: 1696486500000,
       },
     ]);
   });
@@ -504,7 +504,7 @@ describe("main", () => {
     const { fs } = memfs(
       {
         "./vercel-other.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -519,7 +519,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(0);
     destination.clear();
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -527,18 +527,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api Every second",
+        msg: "Succeeded /some-api Every minute",
         status: 200,
         text: "Some Text",
-        time: 1696486442000,
+        time: 1696486500000,
       },
     ]);
   });
@@ -547,7 +547,7 @@ describe("main", () => {
     const { fs } = memfs(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -562,7 +562,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(0);
     destination.clear();
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://my-website.com/some-api",
@@ -570,18 +570,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api Every second",
+        msg: "Succeeded /some-api Every minute",
         status: 200,
         text: "Some Text",
-        time: 1696486442000,
+        time: 1696486500000,
       },
     ]);
   });
@@ -590,7 +590,7 @@ describe("main", () => {
     const { fs } = memfs(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -605,7 +605,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(0);
     destination.clear();
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -615,18 +615,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Succeeded /some-api Every second",
+        msg: "Succeeded /some-api Every minute",
         status: 200,
         text: "Some Text",
-        time: 1696486442000,
+        time: 1696486500000,
       },
     ]);
   });
@@ -635,7 +635,7 @@ describe("main", () => {
     const { fs } = memfs(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -659,7 +659,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(0);
     destination.clear();
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -667,18 +667,18 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 50,
-        msg: "Failed /some-api Every second",
+        msg: "Failed /some-api Every minute",
         status: 400,
         text: "Mock Error",
-        time: 1696486442000,
+        time: 1696486500000,
         error: {
           message: "Mock Error",
           type: "Error",
@@ -692,7 +692,7 @@ describe("main", () => {
     const { fs } = memfs(
       {
         "./vercel.json": JSON.stringify({
-          crons: [{ path: "/some-api", schedule: "* * * * * *" }],
+          crons: [{ path: "/some-api", schedule: "* * * * *" }],
         }),
       },
       process.cwd()
@@ -704,7 +704,7 @@ describe("main", () => {
 
     await jest.advanceTimersByTimeAsync(0);
     destination.clear();
-    await jest.advanceTimersByTimeAsync(1000);
+    await jest.advanceTimersByTimeAsync(60000);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://localhost:3000/some-api",
@@ -712,16 +712,16 @@ describe("main", () => {
     );
     expect(destination.logs).toStrictEqual([
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 30,
-        msg: "Started /some-api Every second",
-        time: 1696486442000,
+        msg: "Started /some-api Every minute",
+        time: 1696486500000,
       },
       {
-        currentRun: "2023-10-05T06:14:02.000Z",
+        currentRun: "2023-10-05T06:15:00.000Z",
         level: 50,
-        msg: "Failed /some-api Every second",
-        time: 1696486442000,
+        msg: "Failed /some-api Every minute",
+        time: 1696486500000,
         error: {
           message: "Mock Error",
           type: "Error",
