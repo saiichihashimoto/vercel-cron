@@ -122,7 +122,7 @@ describe("main", () => {
         time: 1696486441293,
         msg: "Watching Config",
       },
-      { level: 40, time: 1696486441293, msg: "No CRONs Scheduled" },
+      { level: 40, time: 1696486441293, msg: "No Crons Scheduled" },
     ]);
   });
 
@@ -152,11 +152,11 @@ describe("main", () => {
         time: 1696486441293,
         msg: "Watching Config",
       },
-      { level: 40, time: 1696486441293, msg: "No CRONs Scheduled" },
+      { level: 40, time: 1696486441293, msg: "No Crons Scheduled" },
     ]);
   });
 
-  it("executes CRON when schedule passes", async () => {
+  it("executes cron when schedule passes", async () => {
     const { fs } = memfs(
       {
         "./vercel.json": JSON.stringify({
@@ -349,7 +349,7 @@ describe("main", () => {
     destination.clear();
   });
 
-  it("reschedules CRONs on file change", async () => {
+  it("reschedules crons on file change", async () => {
     const { fs, vol } = memfs(
       {
         "./vercel.json": JSON.stringify({
@@ -389,7 +389,7 @@ describe("main", () => {
         msg: "Config Changed",
         time: 1696486441293,
       },
-      { level: 40, msg: "No CRONs Scheduled", time: 1696486441293 },
+      { level: 40, msg: "No Crons Scheduled", time: 1696486441293 },
     ]);
     destination.clear();
 
@@ -419,7 +419,7 @@ describe("main", () => {
       },
       {
         level: 60,
-        msg: "Failed to Schedule CRONs",
+        msg: "Failed to Schedule Crons",
         time: 1696486441293,
         error: {
           type: "ZodError",

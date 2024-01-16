@@ -98,7 +98,7 @@ export const main = async ({
   if (logger.isLevelEnabled("info") && pretty) {
     /* eslint-disable no-console -- boxen! */
     console.log(
-      boxen("▲   Vercel CRON   ▲", {
+      boxen("▲   Vercel Cron   ▲", {
         borderColor: color ? "magenta" : undefined,
         borderStyle: "round",
         padding: 1,
@@ -177,7 +177,7 @@ export const main = async ({
     });
 
     if (!crons.length) {
-      logger.warn("No CRONs Scheduled");
+      logger.warn("No Crons Scheduled");
     }
 
     return controller.abort.bind(controller);
@@ -199,7 +199,7 @@ export const main = async ({
       // eslint-disable-next-line require-atomic-updates -- HACK
       abortPrevious = await scheduleCrons();
     } catch (error) {
-      logger.fatal({ error }, "Failed to Schedule CRONs");
+      logger.fatal({ error }, "Failed to Schedule Crons");
       abortPrevious = () => {};
     }
   }) satisfies Parameters<typeof fs.watch>[1]);

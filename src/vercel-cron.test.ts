@@ -53,7 +53,7 @@ Options:
   -u --url <url>        Base URL (default: "http://localhost:3000")
   -p --config <config>  Vercel Config (default: "./vercel.json")
   -s --secret <secret>  Cron Secret (default: \`process.env.CRON_SECRET\`)
-  --dry                 Shows scheduled CRONs and quit
+  --dry                 Shows scheduled Crons and quit
   --color               Show terminal colors (default: \`chalk.supportsColor\`)
   --no-pretty           No pretty printing, just a JSON stream of logs
   -l --level <level>    Logging Level (choices: "trace", "debug", "info",
@@ -90,11 +90,11 @@ Options:
     expect(stdout).toBe(
       `${chalk.magenta("╭─────────────────────────╮")}
 ${chalk.magenta("│")}                         ${chalk.magenta("│")}
-${chalk.magenta("│")}   ▲   Vercel CRON   ▲   ${chalk.magenta("│")}
+${chalk.magenta("│")}   ▲   Vercel Cron   ▲   ${chalk.magenta("│")}
 ${chalk.magenta("│")}                         ${chalk.magenta("│")}
 ${chalk.magenta("╰─────────────────────────╯")}
 
-${chalk.yellow("WARN")}: ${chalk.cyan(`No CRONs Scheduled`)}
+${chalk.yellow("WARN")}: ${chalk.cyan(`No Crons Scheduled`)}
 `
     );
   });
