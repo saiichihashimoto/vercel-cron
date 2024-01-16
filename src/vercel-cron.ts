@@ -21,7 +21,7 @@ import pkg from "../package.json";
             "`process.env.CRON_SECRET`"
           )
         )
-        .option("--dry", "Shows scheduled CRONs and quit")
+        .option("--dry", "Shows scheduled Crons and quit")
         .addOption(
           new Option("--color", "Show terminal colors").default(
             Boolean(chalk.supportsColor),
