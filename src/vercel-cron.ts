@@ -17,7 +17,7 @@ import pkg from "../package.json";
         .option("-p --config <config>", "Vercel Config", defaults.config)
         .addOption(
           new Option("-s --secret <secret>", "Cron Secret").default(
-            defaults.secret,
+            null,
             "`process.env.CRON_SECRET`"
           )
         )

@@ -26,6 +26,7 @@
     "test": "jest --color --cache"
   },
   "dependencies": {
+    "@next/env": "14.0.4",
     "boxen": "5.1.2",
     "chalk": "4.1.2",
     "commander": "11.1.0",
