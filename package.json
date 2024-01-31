@@ -28,7 +28,7 @@
   "dependencies": {
     "@next/env": "14.1.0",
     "boxen": "5.1.2",
-    "chalk": "4.1.2",
+    "chalk": "5.3.0",
     "commander": "11.1.0",
     "croner": "8.0.0",
     "cronstrue": "2.47.0",
