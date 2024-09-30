@@ -19,7 +19,7 @@
     "dev:build": "tsc-watch --preserveWatchOutput --onSuccess \"sh -c 'chmod +x ./dist/vercel-cron.js; ./dist/vercel-cron.js --version && ./dist/vercel-cron.js --help && ./dist/vercel-cron.js --trace'\"",
     "dev:test": "npm run test -- --watch",
     "lint": "lint-staged --shell --verbose --diff \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\" --no-stash",
-    "prepare": "is-ci || husky install",
+    "prepare": "is-ci || husky",
     "start": "./dist/vercel-cron.js",
     "stryker": "stryker run",
     "pretest": "rm -rf .stryker-tmp",
@@ -83,6 +83,6 @@
     "typescript": "5.3.3"
   },
   "engines": {
-    "node": "^18.15.0"
+    "node": "^16.0.0 || ^18.0.0 || ^20.0.0"
   }
 }
