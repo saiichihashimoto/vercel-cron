@@ -1,6 +1,6 @@
 // Stryker disable all
 
-// TODO [engine:node@>=20.3.0]: Replace with AbortSignal.any
+// TODO [typescript@>=5.8]: Replace with AbortSignal.any https://github.com/microsoft/TypeScript/issues/60695
 export const anySignal = (signals: Array<AbortSignal | null | undefined>) => {
   const controller = new globalThis.AbortController();
 

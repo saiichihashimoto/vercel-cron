@@ -3,6 +3,10 @@
   "name": "vercel-cron",
   "version": "0.0.0-development",
   "description": "Vercel Crons for local development",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saiichihashimoto/vercel-cron.git"
+  },
   "funding": {
     "type": "individual",
     "url": "https://github.com/sponsors/saiichihashimoto"
@@ -76,13 +80,13 @@
     "memfs": "4.6.0",
     "prettier": "2.8.8",
     "prettier-plugin-sh": "0.12.8",
-    "semantic-release": "23.0.8",
+    "semantic-release": "25.0.0",
     "ts-jest": "29.1.2",
     "ts-node": "10.9.2",
     "tsc-watch": "6.0.4",
     "typescript": "5.3.3"
   },
   "engines": {
-    "node": "^16.0.0 || ^18.0.0 || ^20.0.0 || ^22.0.0"
+    "node": "^22.14.0"
   }
 }
