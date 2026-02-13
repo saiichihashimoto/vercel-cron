@@ -3,5 +3,6 @@
   "allowEmpty": true,
   "reporters": ["clear-text", "progress", "dashboard"],
   "checkers": ["typescript"],
+  "ignoreStatic": true,
   "testRunner": "jest"
 }
